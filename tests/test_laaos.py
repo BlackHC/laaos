@@ -152,6 +152,15 @@ def test_list_set_unknown():
         store['list'][1] = 1
 
 
+def test_nested_lists():
+    code = io.StringIO()
 
+    store = Store(code, dict(lists=[[[]]]))
+    store['lists'][0][0].append(1)
+
+    assert store == safe_load_store_str(code.getvalue())
+    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+
+    store.close()
 
 

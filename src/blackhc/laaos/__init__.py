@@ -18,12 +18,21 @@ def time_generate_id():
     return '_' + id
 
 
+def can_iter(obj):
+    try:
+        iter(obj)
+    except TypeError:
+        return False
+    else:
+        return True
+
+
 class Store(MutableMapping):
     def __init__(self, log: TextIOBase, initial_data=None):
         initial_data = initial_data or {}
 
         self._log = log
-        self._root = StoreDict(self, initial_data)
+        self._root = StoreDict(self, self._wrap(initial_data))
         StoreAccessable.link(self._root, 'store')
         Store.write(self, f'store = {self._root!r}')
 
@@ -39,11 +48,10 @@ class Store(MutableMapping):
             obj = StoreDict(self, {key: self._wrap(value) for key, value in obj.items()})
         elif isinstance(obj, set):
             obj = StoreSet(self, {self._wrap(value) for value in obj})
+        elif can_iter(obj):
+            obj = StoreList(self, [self._wrap(value) for value in iter(obj)])
         else:
-            try:
-                obj = StoreList(self, [self._wrap(value) for value in iter(obj)])
-            except:
-                raise KeyError(f'{type(obj)} not supported for LAAOS!')
+            raise KeyError(f'{type(obj)} not supported for LAAOS!')
         return obj
 
     @staticmethod
@@ -89,16 +97,21 @@ class StoreAccessable(object):
     def _write(self, text):
         return Store.write(self._store, text)
 
+    def _unlink(self):
+        self._accessor = None
+
+    def _link(self, accessor):
+        self._accessor = accessor
+
     @staticmethod
     def unlink(obj):
-        # TODO: support slices and iterables!!! /o\
         if isinstance(obj, StoreAccessable):
-            obj._accessor = None
+            obj._unlink()
 
     @staticmethod
     def link(obj, accessor):
         if isinstance(obj, StoreAccessable):
-            obj._accessor = accessor
+            obj._link(accessor)
 
 
 class StoreDict(MutableMapping, StoreAccessable):
@@ -107,17 +120,32 @@ class StoreDict(MutableMapping, StoreAccessable):
         self._data = {}
         self._data.update(initial_data)
 
+    def _unlink(self):
+        super()._unlink()
+        for value in self._data.values():
+            StoreAccessable.unlink(value)
+
+    def _link(self, accessor):
+        super()._link(accessor)
+        for key, value in self._data.items():
+            StoreAccessable.link(value, f'{self._accessor}[{key!r}]')
+
     def __getitem__(self, key: KT) -> VT_co:
         return self._data[key]
 
     def __setitem__(self, key: KT, value: VT) -> None:
         self._check_accessor()
-        StoreAccessable.unlink(self._data.get(key, None))
+
+        old_value = self._data.get(key, None)
+        if old_value is value:
+            return
+
+        StoreAccessable.unlink(old_value)
 
         value = self._wrap(value)
         self._data[key] = value
-
         self._write(f'{self._accessor}[{key!r}]={value!r}')
+
         StoreAccessable.link(value, f'{self._accessor}[{key!r}]')
 
     def __delitem__(self, key: KT) -> None:
@@ -147,6 +175,19 @@ class StoreList(MutableSequence, StoreAccessable):
         super().__init__(store)
         self._seq = list(seq)
 
+    def _unlink(self):
+        super()._unlink()
+        for value in self._seq:
+            StoreAccessable.unlink(value)
+
+    def _link(self, accessor):
+        super()._link(accessor)
+        for key, value in enumerate(self._seq):
+            StoreAccessable.link(value, f'{self._accessor}[{key!r}]')
+
+    def clear(self) -> None:
+        self._check_accessor()
+
     def insert(self, index: int, obj: T) -> None:
         self._check_accessor()
 
@@ -174,7 +215,11 @@ class StoreList(MutableSequence, StoreAccessable):
 
         self._check_accessor()
 
-        StoreAccessable.unlink(self._seq[key])
+        old_value = self._seq[key]
+        if old_value is value:
+            return
+
+        StoreAccessable.unlink(old_value)
 
         value = self._wrap(value)
         self._seq[key] = value
