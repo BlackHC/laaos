@@ -42,11 +42,11 @@ class Store(MutableMapping):
     def _wrap(self, obj):
         if isinstance(obj, (int, float, complex, str, type(None), bool)):
             pass
-        elif isinstance(obj, list):
+        elif isinstance(obj, (list, StoreList)):
             obj = StoreList(self, [self._wrap(value) for value in obj])
-        elif isinstance(obj, dict):
+        elif isinstance(obj, (dict, StoreDict)):
             obj = StoreDict(self, {key: self._wrap(value) for key, value in obj.items()})
-        elif isinstance(obj, set):
+        elif isinstance(obj, (set, StoreSet)):
             obj = StoreSet(self, {self._wrap(value) for value in obj})
         elif can_iter(obj):
             obj = StoreList(self, [self._wrap(value) for value in iter(obj)])

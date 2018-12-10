@@ -164,3 +164,66 @@ def test_nested_lists():
     store.close()
 
 
+def test_fail_on_chained_assignment():
+    code = io.StringIO()
+
+    store = Store(code)
+    a = store['list'] = []
+    a.append(1)
+
+    assert a == [1]
+    assert store['list'] == []
+    assert a != store['list']
+
+    store.close()
+
+
+def test_list_duplicate_on_multiple_assignments():
+    code = io.StringIO()
+
+    store = Store(code)
+
+    store['list'] = [1, 2]
+    store['list2'] = store['list']
+    store['list'].append(3)
+
+    assert 3 not in store['list2']
+    assert store['list'] != store['list2']
+    assert store == safe_load_store_str(code.getvalue())
+    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+
+    store.close()
+
+
+def test_map_duplicate_on_multiple_assignments():
+    code = io.StringIO()
+
+    store = Store(code)
+
+    store['dict'] = dict(a=1)
+    store['dict2'] = store['dict']
+    store['dict']['b'] = 2
+
+    assert store == safe_load_store_str(code.getvalue())
+    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+
+    store.close()
+
+
+def test_relink_works():
+    code = io.StringIO()
+
+    store = Store(code)
+
+    store['dict'] = dict(a=1)
+    a = store['dict']
+
+    del store['dict']
+
+    store['dict2'] = a
+    store['dict2']['b'] = 2
+
+    assert store == safe_load_store_str(code.getvalue())
+    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+
+    store.close()
