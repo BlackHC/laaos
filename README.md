@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/BlackHC/laaos.svg?branch=master)](https://travis-ci.org/BlackHC/laaos)
 
-The idea is to create append-only source logs that can easily be imported into Jupyter Notebooks and elsewhere.
+Logs as append-only source: write your ML training results in Python without having to worry about crashes. Loading is a breeze: the logs are native Python code. The package supports unstructured data. The data can easily be imported into Jupyter notebooks or elsewhere.
 
 ## Installation
 
