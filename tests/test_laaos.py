@@ -79,6 +79,22 @@ def test_list():
     store.close()
 
 
+def test_list_clear():
+    code = io.StringIO()
+
+    store = Store(code)
+    store['list'] = [1, 2, 3]
+    assert store['list'] == [1, 2, 3]
+
+    store['list'].clear()
+    assert len(store['list']) == 0
+
+    assert store == safe_load_store_str(code.getvalue())
+    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+
+    store.close()
+
+
 def test_set():
     code = io.StringIO()
 

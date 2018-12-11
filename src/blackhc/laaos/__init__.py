@@ -187,6 +187,10 @@ class StoreList(MutableSequence, StoreAccessable):
 
     def clear(self) -> None:
         self._check_accessor()
+        for value in self._seq:
+            StoreAccessable.unlink(value)
+        self._seq.clear()
+        self._write(f'{self._accessor}.clear()')
 
     def insert(self, index: int, obj: T) -> None:
         self._check_accessor()
