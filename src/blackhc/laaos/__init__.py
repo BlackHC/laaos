@@ -27,10 +27,16 @@ def can_iter(obj):
         return True
 
 
-class Store(MutableMapping):
-    def __init__(self, log: TextIOBase, initial_data=None):
-        initial_data = initial_data or {}
+def try_str_encoding(obj, wrap):
+    return str(obj)
 
+
+class Store(MutableMapping):
+    def __init__(self, log: TextIOBase, initial_data=None, encoder=None):
+        if initial_data is None:
+            initial_data = {}
+
+        self._encoder = encoder
         self._log = log
         self._root = StoreDict(self, self._wrap(initial_data))
         StoreAccessable.link(self._root, 'store')
@@ -51,12 +57,18 @@ class Store(MutableMapping):
         elif can_iter(obj):
             obj = StoreList(self, [self._wrap(value) for value in iter(obj)])
         else:
+            if self._encoder:
+                encoded_obj = self._encoder(obj, self._wrap)
+                if encoded_obj is not obj:
+                    obj = self._wrap(encoded_obj)
+                    return obj
             raise KeyError(f'{type(obj)} not supported for LAAOS!')
         return obj
 
     @staticmethod
     def write(store: 'Store', text):
         store._log.write(text + '\n')
+        store._log.flush()
 
     @staticmethod
     def wrap(store: 'Store', obj):
@@ -284,14 +296,14 @@ class StoreSet(MutableSet, StoreAccessable):
         return repr(self._set)
 
 
-def create_file_store(store_name='results', suffix=None, prefix='laaos/') -> Store:
+def create_file_store(store_name='results', suffix=None, prefix='laaos/', **kwargs) -> Store:
     if suffix is None:
         suffix = time_generate_id()
 
     filename = f'{prefix}{store_name}{suffix}.py'
     log = open(filename, "at")
 
-    return Store(log, {})
+    return Store(log, **kwargs)
 
 
 def safe_load_store_str(code: str):
