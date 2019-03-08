@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Iterator
 from typing import TypeVar
 from io import TextIOBase
+import pprint
 
 T = TypeVar('T')  # Any type.
 KT = TypeVar('KT')  # Key type.
@@ -31,22 +32,27 @@ def try_str_encoding(obj, wrap):
     return str(obj)
 
 
-class Store(MutableMapping):
+class Store:
     def __init__(self, log: TextIOBase, initial_data=None, encoder=None):
         if initial_data is None:
             initial_data = {}
 
         self._encoder = encoder
         self._log = log
-        self._root = StoreDict(self, self._wrap(initial_data))
+        self._root = StoreRoot(self, self._wrap(initial_data))
         StoreAccessable.link(self._root, 'store')
-        Store.write(self, f'store = {self._root!r}')
+        if initial_data:
+            Store.write(self, f'store = (\n{pprint.pformat(initial_data, width=160, compact=True)}\n)')
+        else:
+            Store.write(self, 'store = {}')
 
     def close(self):
         self._log.close()
 
     def _wrap(self, obj):
         if isinstance(obj, (int, float, complex, str, type(None), bool)):
+            pass
+        elif isinstance(obj, StoreAccessable) and obj._accessor is None:
             pass
         elif isinstance(obj, (list, StoreList)):
             obj = StoreList(self, [self._wrap(value) for value in obj])
@@ -74,20 +80,9 @@ class Store(MutableMapping):
     def wrap(store: 'Store', obj):
         return store._wrap(obj)
 
-    def __setitem__(self, k: KT, v: VT) -> None:
-        self._root[k] = v
-
-    def __delitem__(self, v: KT) -> None:
-        del self._root[v]
-
-    def __getitem__(self, k: KT) -> VT_co:
-        return self._root[k]
-
-    def __len__(self) -> int:
-        return len(self._root)
-
-    def __iter__(self) -> Iterator[T_co]:
-        return iter(self._root)
+    @property
+    def root(self):
+        return self._root
 
     def __repr__(self):
         return repr(self._root)
@@ -124,6 +119,21 @@ class StoreAccessable(object):
     def link(obj, accessor):
         if isinstance(obj, StoreAccessable):
             obj._link(accessor)
+
+    def new_set(self, initial_data=None):
+        if initial_data is None:
+            initial_data = set()
+        return StoreSet(self._store, initial_data)
+
+    def new_list(self, initial_data=None):
+        if initial_data is None:
+            initial_data = []
+        return StoreList(self._store, initial_data)
+
+    def new_dict(self, initial_data=None):
+        if initial_data is None:
+            initial_data = {}
+        return StoreDict(self._store, initial_data)
 
 
 class StoreDict(MutableMapping, StoreAccessable):
@@ -180,6 +190,14 @@ class StoreDict(MutableMapping, StoreAccessable):
 
     def __repr__(self) -> str:
         return repr(self._data)
+
+
+class StoreRoot(StoreDict):
+    def __init__(self, store: Store, initial_data):
+        super().__init__(store, initial_data)
+
+    def close(self):
+        return self._store.close()
 
 
 class StoreList(MutableSequence, StoreAccessable):
@@ -296,22 +314,32 @@ class StoreSet(MutableSet, StoreAccessable):
         return repr(self._set)
 
 
-def create_file_store(store_name='results', suffix=None, prefix='laaos/', **kwargs) -> Store:
+def create_file_store(store_name='results', suffix=None, prefix='laaos/', truncate=False, **kwargs) -> StoreDict:
     if suffix is None:
         suffix = time_generate_id()
 
     filename = f'{prefix}{store_name}{suffix}.py'
-    log = open(filename, "at")
+    log = open(filename, "at" if not truncate else "wt")
 
-    return Store(log, **kwargs)
+    store = Store(log, **kwargs)
+    return store.root
 
 
 def safe_load_store_str(code: str):
     root = dict()
-    exec(code, dict(__builtins__=dict()), root)
+    exec(code, dict(__builtins__=dict(set=set)), root)
     return root['store']
 
 
 def safe_load_store(filename: str):
     with open(filename, 'rt') as file:
         return safe_load_store_str(file.read())
+
+
+def compact_store(source_path: str, destination_path: str):
+    source_store = safe_load_store(source_path)
+
+    destination = open(destination_path, "wt")
+    destination_store = Store(destination, initial_data=source_store)
+    destination_store.close()
+

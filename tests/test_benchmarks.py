@@ -16,7 +16,7 @@ def test_n(n):
     code = io.StringIO()
 
     start_time = time.monotonic()
-    store = Store(code)
+    store = Store(code).root
 
     store['losses'] = []
     losses = store['losses']

@@ -1,20 +1,21 @@
 import pytest
 
 import io
-from blackhc.laaos import Store, safe_load_store_str
+from blackhc.laaos import Store, safe_load_store_str, compact_store
 
+
+def create_memory_store(*args, **kwargs):
+    code = io.StringIO()
+    store = Store(code, *args, **kwargs)
+    return store.root, code
 
 def test_creation():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, _ = create_memory_store()
     store.close()
 
 
 def test_root_map():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
     store['test'] = 1
     assert store['test'] == 1
     del store['test']
@@ -31,9 +32,7 @@ def test_root_map():
 
 
 def test_root_map_initial_data():
-    code = io.StringIO()
-
-    store = Store(code, dict(a=2, b=3))
+    store, code = create_memory_store(dict(a=2, b=3))
     assert store['a'] == 2
     assert store['b'] == 3
     assert 'c' not in store
@@ -45,9 +44,7 @@ def test_root_map_initial_data():
 
 
 def test_map():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
     store['test'] = dict(a=2, b=3)
     assert store['test'] == dict(a=2, b=3)
     del store['test']['a']
@@ -60,9 +57,7 @@ def test_map():
 
 
 def test_list():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
     store['list'] = [1, 2, 3]
     assert store['list'] == [1, 2, 3]
 
@@ -80,9 +75,7 @@ def test_list():
 
 
 def test_list_clear():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
     store['list'] = [1, 2, 3]
     assert store['list'] == [1, 2, 3]
 
@@ -96,9 +89,7 @@ def test_list_clear():
 
 
 def test_set():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
     store['set'] = {1, 2, 3}
     assert store['set'] == {1, 2, 3}
 
@@ -117,9 +108,7 @@ def test_set():
 
 
 def test_raise_on_slice():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
     store['list'] = [1, 2, 3]
 
     with pytest.raises(AssertionError):
@@ -129,9 +118,7 @@ def test_raise_on_slice():
 
 
 def test_raise_after_unlink():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
     store['list'] = [1, 2, 3]
 
     the_list = store['list']
@@ -144,9 +131,7 @@ def test_raise_after_unlink():
 
 
 def test_del_unknown():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
     store['list'] = []
 
     with pytest.raises(IndexError):
@@ -159,9 +144,7 @@ def test_del_unknown():
 
 
 def test_list_set_unknown():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
     store['list'] = []
 
     with pytest.raises(IndexError):
@@ -169,9 +152,7 @@ def test_list_set_unknown():
 
 
 def test_nested_lists():
-    code = io.StringIO()
-
-    store = Store(code, dict(lists=[[[]]]))
+    store, code = create_memory_store(dict(lists=[[[]]]))
     store['lists'][0][0].append(1)
 
     assert store == safe_load_store_str(code.getvalue())
@@ -181,9 +162,7 @@ def test_nested_lists():
 
 
 def test_fail_on_chained_assignment():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
     a = store['list'] = []
     a.append(1)
 
@@ -195,9 +174,7 @@ def test_fail_on_chained_assignment():
 
 
 def test_list_duplicate_on_multiple_assignments():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
 
     store['list'] = [1, 2]
     store['list2'] = store['list']
@@ -212,9 +189,7 @@ def test_list_duplicate_on_multiple_assignments():
 
 
 def test_map_duplicate_on_multiple_assignments():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
 
     store['dict'] = dict(a=1)
     store['dict2'] = store['dict']
@@ -227,9 +202,7 @@ def test_map_duplicate_on_multiple_assignments():
 
 
 def test_relink_works():
-    code = io.StringIO()
-
-    store = Store(code)
+    store, code = create_memory_store()
 
     store['dict'] = dict(a=1)
     a = store['dict']
@@ -243,3 +216,43 @@ def test_relink_works():
     assert repr(store) == repr(safe_load_store_str(code.getvalue()))
 
     store.close()
+
+
+def test_compaction():
+    compact_store('./laaos/test.py', './laaos/test_compacted.py')
+
+
+def test_can_passthrough_dict():
+    store, code = create_memory_store()
+
+    d = store['dict'] = store.new_dict()
+    d['a'] = 1
+
+    assert store['dict']['a'] == 1
+
+    assert store == safe_load_store_str(code.getvalue())
+    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+
+
+def test_can_passthrough_list():
+    store, code = create_memory_store()
+
+    l = store['list'] = store.new_list()
+    l.append(1)
+
+    assert store['list'] == [1]
+
+    assert store == safe_load_store_str(code.getvalue())
+    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+
+
+def test_can_passthrough_set():
+    store, code = create_memory_store()
+
+    s = store['set'] = store.new_set()
+    s.add(1)
+
+    assert store['set'] == set([1])
+
+    assert store == safe_load_store_str(code.getvalue())
+    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
