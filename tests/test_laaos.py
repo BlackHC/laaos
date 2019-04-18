@@ -1,7 +1,8 @@
 import pytest
-
+import enum
 import io
-from blackhc.laaos import Store, safe_load_store_str, compact_store
+from blackhc.laaos import Store, safe_load_str, compact
+import blackhc.laaos as laaos
 
 
 def create_memory_store(*args, **kwargs):
@@ -25,8 +26,8 @@ def test_root_map():
 
     assert len(store) == 1
 
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
 
     store.close()
 
@@ -37,8 +38,8 @@ def test_root_map_initial_data():
     assert store['b'] == 3
     assert 'c' not in store
 
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
 
     store.close()
 
@@ -50,8 +51,8 @@ def test_map():
     del store['test']['a']
     assert 'a' not in store['test']
 
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
 
     store.close()
 
@@ -68,8 +69,8 @@ def test_list():
 
     assert store['list'] == [2, 3, 5]
 
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
 
     store.close()
 
@@ -82,8 +83,8 @@ def test_list_clear():
     store['list'].clear()
     assert len(store['list']) == 0
 
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
 
     store.close()
 
@@ -101,8 +102,8 @@ def test_set():
 
     assert 5 not in store['set']
 
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
 
     store.close()
 
@@ -155,8 +156,8 @@ def test_nested_lists():
     store, code = create_memory_store(dict(lists=[[[]]]))
     store['lists'][0][0].append(1)
 
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
 
     store.close()
 
@@ -182,8 +183,8 @@ def test_list_duplicate_on_multiple_assignments():
 
     assert 3 not in store['list2']
     assert store['list'] != store['list2']
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
 
     store.close()
 
@@ -195,8 +196,8 @@ def test_map_duplicate_on_multiple_assignments():
     store['dict2'] = store['dict']
     store['dict']['b'] = 2
 
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
 
     store.close()
 
@@ -212,14 +213,14 @@ def test_relink_works():
     store['dict2'] = a
     store['dict2']['b'] = 2
 
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
 
     store.close()
 
 
 def test_compaction():
-    compact_store('./laaos/test.py', './laaos/test_compacted.py')
+    compact('./laaos/test.py', './laaos/test_compacted.py')
 
 
 def test_can_passthrough_dict():
@@ -230,8 +231,8 @@ def test_can_passthrough_dict():
 
     assert store['dict']['a'] == 1
 
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
 
 
 def test_can_passthrough_list():
@@ -242,8 +243,8 @@ def test_can_passthrough_list():
 
     assert store['list'] == [1]
 
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
 
 
 def test_can_passthrough_set():
@@ -254,5 +255,32 @@ def test_can_passthrough_set():
 
     assert store['set'] == set([1])
 
-    assert store == safe_load_store_str(code.getvalue())
-    assert repr(store) == repr(safe_load_store_str(code.getvalue()))
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
+
+
+def test_enum_str_handler():
+    class A(enum.Enum):
+        a = 1
+        b = 2
+
+    store, code = create_memory_store(type_handlers=[laaos.StrEnumHandler()])
+
+    store[A.a] = A.b
+
+    loaded = safe_load_str(code.getvalue())
+    assert loaded == {'A.a': 'A.b'}
+
+
+class B(enum.Enum):
+    a = 1
+    b = 2
+
+
+def test_enum_weak_handler():
+    store, code = create_memory_store(type_handlers=[laaos.WeakEnumHandler()])
+
+    store[B.a] = B.b
+
+    loaded = safe_load_str(code.getvalue(), expose_symbols=[B])
+    assert loaded == store

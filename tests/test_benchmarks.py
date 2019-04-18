@@ -1,7 +1,7 @@
 import pytest
 
 import io
-from blackhc.laaos import Store, safe_load_store_str
+from blackhc.laaos import Store, safe_load_str
 import time
 
 
@@ -32,7 +32,7 @@ def test_n(n):
     store.close()
 
     start_time = time.monotonic()
-    read_store = safe_load_store_str(code_text)
+    read_store = safe_load_str(code_text)
     end_time = time.monotonic()
     read_duration = end_time - start_time
     print(f'Time for {n} load: {read_duration}s.')

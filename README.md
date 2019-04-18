@@ -29,6 +29,10 @@ If the data structure itself is growing and not mutated, this only increases fil
 
 The advantage of this library is that the file format is very simple: it's valid Python code.
 
+The only requirement is that you only store primitive types, lists, sets, dicts and immutable types.
+
+Custom wrappers can be added by registering `TypeHandler`s. See `WeakEnumHandler` and `StrEnumHandler`.
+
 ## Example
 
 ```python
@@ -69,5 +73,5 @@ form laaos.test import store
 or with the more secure:
 
 ```python
-safe_load_store('laaos/test.py')
+safe_load('laaos/test.py')
 ```
