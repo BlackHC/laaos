@@ -65,6 +65,18 @@ class StrEnumHandler(TypeHandler):
         return repr(str(obj))
 
 
+class ToReprHandler(TypeHandler):
+    """Convert anything to repr. This is a catch-all."""
+    def supports(self, obj):
+        return True
+
+    def wrap(self, obj, wrap):
+        return obj
+
+    def repr(self, obj: enum.Enum, repr, store):
+        return repr(str(obj))
+
+
 class Store:
     def __init__(self, log: TextIOBase, initial_data=None, type_handlers=()):
         if initial_data is None:
