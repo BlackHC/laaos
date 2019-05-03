@@ -73,8 +73,8 @@ class ToReprHandler(TypeHandler):
     def wrap(self, obj, wrap):
         return obj
 
-    def repr(self, obj: enum.Enum, repr, store):
-        return repr(str(obj))
+    def repr(self, obj: enum.Enum, _repr, store):
+        return repr(obj)
 
 
 class Store:
@@ -117,11 +117,11 @@ class Store:
     def _repr(self, obj):
         if isinstance(obj, (int, float, complex, str, type(None), bool)):
             return repr(obj)
-        elif isinstance(obj, list):
+        elif isinstance(obj, (list, StoreList)):
             return '[' + ', '.join(self._repr(value) for value in obj) + ']'
-        elif isinstance(obj, dict):
+        elif isinstance(obj, (dict, StoreDict)):
             return '{' + ', '.join(f'{self._repr(key)}: {self._repr(value)}' for key, value in obj.items()) + '}'
-        elif isinstance(obj, set):
+        elif isinstance(obj, (set, StoreSet)):
             return '{' + ', '.join(self._repr(value) for value in obj) + '}' if obj else 'set()'
         else:
             for type_handler in self._type_handlers:
