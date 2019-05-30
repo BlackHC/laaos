@@ -20,6 +20,7 @@ setup(
     description='"Log as append-only source" logger',
     # Fix windows newlines.
     long_description=long_description.replace("\r\n", "\n"),
+    long_description_content_type="text/markdown",
     # The project's main homepage.
     url="https://github.com/blackhc/laaos",
     # Author details
