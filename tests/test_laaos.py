@@ -5,9 +5,9 @@ from blackhc.laaos import Store, safe_load_str, compact
 import blackhc.laaos as laaos
 
 
-def create_memory_store(*args, **kwargs):
+def create_memory_store(initial_data=None, type_handlers=None):
     code = io.StringIO()
-    store = Store(code, *args, **kwargs)
+    store = Store(code, initial_data=initial_data, type_handlers=type_handlers)
     return store.root, code
 
 

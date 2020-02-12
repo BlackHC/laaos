@@ -102,11 +102,12 @@ class ToReprHandler(TypeHandler):
 
 
 class Store:
-    def __init__(self, log: TextIOBase, initial_data=None, *, type_handlers=None):
+    def __init__(self, log: TextIOBase, *, uri=None, initial_data=None, type_handlers=None):
         """
         Create a Store.
 
         :param log: TextIOBase to write to.
+        :param uri: Identifier for the Store (filename or similar)
         :param initial_data: Initial data for the store dict.
         :param type_handlers: List of type handlers that get called in order
         to wrap and serialize unknown types.
@@ -118,8 +119,9 @@ class Store:
 
         self._type_handlers: List[TypeHandler] = type_handlers
         self._log = log
+        self._uri = uri
         self._root = StoreRoot(self, self._wrap(initial_data))
-        StoreAccessable.link(self._root, "store")
+        StoreAccessible.link(self._root, "store")
         if initial_data:
             Store.write(
                 self,
@@ -128,13 +130,17 @@ class Store:
         else:
             Store.write(self, "store = {}")
 
+    @property
+    def uri(self):
+        return self._uri
+
     def close(self):
         self._log.close()
 
     def _wrap(self, obj):
         if isinstance(obj, (int, float, complex, str, type(None), bool)):
             pass
-        elif isinstance(obj, StoreAccessable) and obj._accessor is None:
+        elif isinstance(obj, StoreAccessible) and obj._accessor is None:
             pass
         elif isinstance(obj, (list, StoreList)):
             obj = StoreList(self, [self._wrap(value) for value in obj])
@@ -200,10 +206,14 @@ class Store:
         return repr(self._root)
 
 
-class StoreAccessable(object):
+class StoreAccessible(object):
     def __init__(self, store: Store):
         self._store = store
         self._accessor = None
+
+    @property
+    def laaos_store(self):
+        return self._store
 
     def _check_accessor(self):
         assert self._accessor is not None, (
@@ -229,12 +239,12 @@ class StoreAccessable(object):
 
     @staticmethod
     def unlink(obj):
-        if isinstance(obj, StoreAccessable):
+        if isinstance(obj, StoreAccessible):
             obj._unlink()
 
     @staticmethod
     def link(obj, accessor):
-        if isinstance(obj, StoreAccessable):
+        if isinstance(obj, StoreAccessible):
             obj._link(accessor)
 
     def new_set(self, initial_data=None):
@@ -253,7 +263,7 @@ class StoreAccessable(object):
         return StoreDict(self._store, initial_data)
 
 
-class StoreDict(MutableMapping, StoreAccessable):
+class StoreDict(MutableMapping, StoreAccessible):
     def __init__(self, store: Store, initial_data):
         super().__init__(store)
         self._data = {}
@@ -262,12 +272,12 @@ class StoreDict(MutableMapping, StoreAccessable):
     def _unlink(self):
         super()._unlink()
         for value in self._data.values():
-            StoreAccessable.unlink(value)
+            StoreAccessible.unlink(value)
 
     def _link(self, accessor):
         super()._link(accessor)
         for key, value in self._data.items():
-            StoreAccessable.link(value, f"{self._accessor}[{self._repr(key)}]")
+            StoreAccessible.link(value, f"{self._accessor}[{self._repr(key)}]")
 
     def __getitem__(self, key: KT) -> VT_co:
         return self._data[key]
@@ -279,13 +289,13 @@ class StoreDict(MutableMapping, StoreAccessable):
         if old_value is value:
             return
 
-        StoreAccessable.unlink(old_value)
+        StoreAccessible.unlink(old_value)
 
         value = self._wrap(value)
         self._data[key] = value
         self._write(f"{self._accessor}[{self._repr(key)}]={self._repr(value)}")
 
-        StoreAccessable.link(value, f"{self._accessor}[{self._repr(key)}]")
+        StoreAccessible.link(value, f"{self._accessor}[{self._repr(key)}]")
 
     def __delitem__(self, key: KT) -> None:
         if key not in self._data:
@@ -293,7 +303,7 @@ class StoreDict(MutableMapping, StoreAccessable):
             del self._data[key]
 
         self._check_accessor()
-        StoreAccessable.unlink(self._data.get(key, None))
+        StoreAccessible.unlink(self._data.get(key, None))
 
         del self._data[key]
 
@@ -316,8 +326,12 @@ class StoreRoot(StoreDict):
     def close(self):
         return self._store.close()
 
+    @property
+    def uri(self):
+        return self._store.uri
 
-class StoreList(MutableSequence, StoreAccessable):
+
+class StoreList(MutableSequence, StoreAccessible):
     def __init__(self, store, seq: list):
         super().__init__(store)
         self._seq = list(seq)
@@ -325,17 +339,17 @@ class StoreList(MutableSequence, StoreAccessable):
     def _unlink(self):
         super()._unlink()
         for value in self._seq:
-            StoreAccessable.unlink(value)
+            StoreAccessible.unlink(value)
 
     def _link(self, accessor):
         super()._link(accessor)
         for key, value in enumerate(self._seq):
-            StoreAccessable.link(value, f"{self._accessor}[{self._repr(key)}]")
+            StoreAccessible.link(value, f"{self._accessor}[{self._repr(key)}]")
 
     def clear(self) -> None:
         self._check_accessor()
         for value in self._seq:
-            StoreAccessable.unlink(value)
+            StoreAccessible.unlink(value)
         self._seq.clear()
         self._write(f"{self._accessor}.clear()")
 
@@ -372,13 +386,13 @@ class StoreList(MutableSequence, StoreAccessable):
         if old_value is value:
             return
 
-        StoreAccessable.unlink(old_value)
+        StoreAccessible.unlink(old_value)
 
         value = self._wrap(value)
         self._seq[key] = value
 
         self._write(f"{self._accessor}[{self._repr(key)}] = {self._repr(value)}")
-        StoreAccessable.link(value, f"{self._accessor}[{self._repr(key)}]")
+        StoreAccessible.link(value, f"{self._accessor}[{self._repr(key)}]")
 
     def __delitem__(self, key) -> None:
         if not 0 <= key < len(self._seq):
@@ -387,7 +401,7 @@ class StoreList(MutableSequence, StoreAccessable):
 
         self._check_accessor()
 
-        StoreAccessable.unlink(self._seq[key])
+        StoreAccessible.unlink(self._seq[key])
         del self._seq[key]
         Store.write(self._store, f"del {self._accessor}[{self._repr(key)}]")
 
@@ -403,7 +417,7 @@ class StoreList(MutableSequence, StoreAccessable):
         return self._seq == other
 
 
-class StoreSet(MutableSet, StoreAccessable):
+class StoreSet(MutableSet, StoreAccessible):
     def __init__(self, store: Store, initial_data):
         super().__init__(store)
         self._set = set(initial_data)
@@ -445,7 +459,7 @@ def create_file_store(
     ext=".py",
     prefix="laaos/",
     truncate=False,
-    **store_kwargs,
+    initial_data=None, *, type_handlers=None,
 ) -> StoreRoot:
     if suffix is None:
         suffix = generate_time_id()
@@ -454,7 +468,7 @@ def create_file_store(
     ensure_dirs(filename)
     log = open(filename, "at" if not truncate else "wt")
 
-    store = Store(log, **store_kwargs)
+    store = Store(log, uri=filename, initial_data=initial_data, type_handlers=type_handlers)
     return store.root
 
 
@@ -478,5 +492,5 @@ def compact(source_path: str, destination_path: str):
 
     ensure_dirs(destination_path)
     destination = open(destination_path, "wt")
-    destination_store = Store(destination, initial_data=source_store)
+    destination_store = Store(destination, uri=source_path, initial_data=source_store)
     destination_store.close()
