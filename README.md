@@ -9,7 +9,7 @@ Logs as append-only source: write your ML training results in Python without hav
 To install using pip, use:
 
 ```
-pip install blackhc.laaos
+pip install laaos
 ```
 
 To run the tests, use:
@@ -36,7 +36,7 @@ Custom wrappers can be added by registering `TypeHandler`s when creating a `Stor
 ## Example
 
 ```python
-from blackhc.laaos import create_file_store, safe_load_store
+from laaos import create_file_store, safe_load_store
 store = create_file_store('test', suffix='')
 
 store['losses'] = []

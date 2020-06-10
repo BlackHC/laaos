@@ -1,8 +1,8 @@
 import pytest
 import enum
 import io
-from blackhc.laaos import Store, safe_load_str, compact
-import blackhc.laaos as laaos
+from laaos import Store, safe_load_str, compact
+import laaos as laaos
 
 
 def create_memory_store(initial_data=None, type_handlers=None):

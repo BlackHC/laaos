@@ -472,19 +472,23 @@ def create_file_store(
     return store.root
 
 
-def safe_load_str(code: str, exposed_symbols=None):
+def safe_load_str(code: str, exposed_symbols=None, extra_mappings=None):
     global_symbols = dict(__builtins__=dict(set=set))
+
     if exposed_symbols is not None:
         global_symbols.update({symbol.__name__: symbol for symbol in exposed_symbols})
+
+    if extra_mappings is not None:
+        global_symbols.update(extra_mappings)
 
     root = dict()
     exec(code, global_symbols, root)
     return root["store"]
 
 
-def safe_load(path: str, exposed_symbols=None):
+def safe_load(path: str, exposed_symbols=None, extra_mappings=None):
     with open(path, "rt") as file:
-        return safe_load_str(file.read(), exposed_symbols=exposed_symbols)
+        return safe_load_str(file.read(), exposed_symbols=exposed_symbols, extra_mappings=extra_mappings)
 
 
 def compact(source_path: str, destination_path: str):

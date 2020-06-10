@@ -12,11 +12,11 @@ with open(path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name="blackhc.laaos",
+    name="laaos",
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version="1.1.0",
+    version="1.2.0",
     description='"Log as append-only source" logger',
     # Fix windows newlines.
     long_description=long_description.replace("\r\n", "\n"),
@@ -47,7 +47,7 @@ setup(
     keywords="logging",
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=["blackhc.laaos"],
+    packages=["laaos"],
     package_dir={"": "src"},
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's

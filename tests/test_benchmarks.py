@@ -1,7 +1,7 @@
 import pytest
 
 import io
-from blackhc.laaos import Store, safe_load_str
+from laaos import Store, safe_load_str
 import time
 
 
