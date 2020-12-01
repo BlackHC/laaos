@@ -247,21 +247,6 @@ class StoreAccessible(object):
         if isinstance(obj, StoreAccessible):
             obj._link(accessor)
 
-    def new_set(self, initial_data=None):
-        if initial_data is None:
-            initial_data = set()
-        return StoreSet(self._store, initial_data)
-
-    def new_list(self, initial_data=None):
-        if initial_data is None:
-            initial_data = []
-        return StoreList(self._store, initial_data)
-
-    def new_dict(self, initial_data=None):
-        if initial_data is None:
-            initial_data = {}
-        return StoreDict(self._store, initial_data)
-
 
 class StoreDict(MutableMapping, StoreAccessible):
     def __init__(self, store: Store, initial_data):
@@ -498,3 +483,23 @@ def compact(source_path: str, destination_path: str):
     destination = open(destination_path, "wt")
     destination_store = Store(destination, uri=source_path, initial_data=source_store)
     destination_store.close()
+
+
+def new_set(obj, accessor) -> set:
+    obj[accessor] = set()
+    return obj[accessor]
+
+
+def new_dict(obj, accessor) -> dict:
+    obj[accessor] = {}
+    return obj[accessor]
+
+
+def new_list(obj, accessor) -> list:
+    obj[accessor] = []
+    return obj[accessor]
+
+
+def put(obj, accessor, data: T) -> T:
+    obj[accessor] = data
+    return obj[accessor]

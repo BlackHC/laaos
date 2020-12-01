@@ -1,7 +1,7 @@
 import pytest
 import enum
 import io
-from laaos import Store, safe_load_str, compact
+from laaos import Store, safe_load_str, compact, new_dict, new_list, new_set
 import laaos as laaos
 
 
@@ -227,7 +227,7 @@ def test_compaction():
 def test_can_passthrough_dict():
     store, code = create_memory_store()
 
-    d = store["dict"] = store.new_dict()
+    d = new_dict(store, "dict")
     d["a"] = 1
 
     assert store["dict"]["a"] == 1
@@ -239,7 +239,7 @@ def test_can_passthrough_dict():
 def test_can_passthrough_list():
     store, code = create_memory_store()
 
-    l = store["list"] = store.new_list()
+    l = new_list(store, "list")
     l.append(1)
 
     assert store["list"] == [1]
@@ -251,10 +251,10 @@ def test_can_passthrough_list():
 def test_can_passthrough_set():
     store, code = create_memory_store()
 
-    s = store["set"] = store.new_set()
+    s = new_set(store, "set")
     s.add(1)
 
-    assert store["set"] == set([1])
+    assert store["set"] == {1}
 
     assert store == safe_load_str(code.getvalue())
     assert repr(store) == repr(safe_load_str(code.getvalue()))
