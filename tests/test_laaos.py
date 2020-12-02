@@ -3,8 +3,18 @@ import os
 import pytest
 import enum
 import io
-from laaos import Store, safe_load_str, safe_load, compact, new_dict, new_list, new_set, StrEnumHandler, \
-    WeakEnumHandler, open_file_store
+from laaos import (
+    Store,
+    safe_load_str,
+    safe_load,
+    compact,
+    new_dict,
+    new_list,
+    new_set,
+    StrEnumHandler,
+    WeakEnumHandler,
+    open_file_store,
+)
 
 
 def create_memory_store(initial_data=None, type_handlers=None):
@@ -310,7 +320,6 @@ def test_can_passthrough_set():
 
 
 def test_enum_str_handler():
-
     class A(enum.Enum):
         a = 1
         b = 2

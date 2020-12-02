@@ -5,7 +5,7 @@ from laaos import Store, safe_load_str
 import time
 
 
-@pytest.mark.parametrize("n", [(10**3), (10**4), (10**5), (10**6)])
+@pytest.mark.parametrize("n", [(10 ** 3), (10 ** 4), (10 ** 5), (10 ** 6)])
 def test_n(n):
     print(f"\n-----{n} items-----")
     code = io.StringIO()
