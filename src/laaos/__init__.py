@@ -128,7 +128,7 @@ class Function2StrHandler(TypeHandler):
 
 
 class Store:
-    def __init__(self, log: TextIOBase, *, uri=None, initial_data=None, type_handlers=None):
+    def __init__(self, log: TextIOBase, *, uri=None, initial_data=None, type_handlers=None, append_mode=False):
         """
         Create a Store.
 
@@ -151,13 +151,14 @@ class Store:
         self._root = StoreRoot(self, wrapped_initial_data)
         StoreAccessible.link(self._root, "store")
 
-        if wrapped_initial_data:
-            Store.write(
-                self,
-                f"store = (\n{pprint.pformat(wrapped_initial_data, width=160, compact=True)}\n)",
-            )
-        else:
-            Store.write(self, "store = {}")
+        if not append_mode:
+            if wrapped_initial_data:
+                Store.write(
+                    self,
+                    f"store = (\n{pprint.pformat(wrapped_initial_data, width=160, compact=True)}\n)",
+                )
+            else:
+                Store.write(self, "store = {}")
 
     @property
     def uri(self):
@@ -195,12 +196,12 @@ class Store:
             return "[" + ", ".join(self._repr(value) for value in obj) + "]"
         elif isinstance(obj, (dict, StoreDict)):
             return (
-                "{"
-                + ", ".join(
-                    f"{self._repr(key)}: {self._repr(value)}"
-                    for key, value in obj.items()
-                )
-                + "}"
+                    "{"
+                    + ", ".join(
+                f"{self._repr(key)}: {self._repr(value)}"
+                for key, value in obj.items()
+            )
+                    + "}"
             )
         elif isinstance(obj, (set, StoreSet)):
             return (
@@ -467,22 +468,52 @@ def ensure_dirs(filename):
     os.makedirs(abs_dir, exist_ok=True)
 
 
-def create_file_store(
-    store_name="results",
-    suffix=None,
-    ext=".py",
-    prefix="laaos/",
-    truncate=False,
-    initial_data=None, *, type_handlers=None,
-) -> StoreRoot:
+def open_file_store(store_name="results", suffix=None, ext=".py", prefix="laaos/", *, truncate=False,
+                                initial_data=None, type_handlers=None,
+                                exposed_symbols=None, extra_mappings=None) -> StoreRoot:
+    """
+    Opens a file store. Either truncates any existing store in the same file, or otherwise loads an existing store to
+    append data. `initial_data` can be used for otherwise empty store.
+
+    Append pattern:
+    ```
+    # config = ...
+    store = open_file_store(suffix="", initial_data=dict(config=config))
+    if store["config"] != config:
+        raise ValueError("Reopened store but config mismatch!")
+    ````
+
+    :param store_name: name of the store
+    :param suffix: if None, use the current time
+    :param ext: file extension
+    :param prefix: prefix file path
+    :param truncate: whether to truncate the store if the file exists already, otherwise load to append
+    :param initial_data: intial data to use for a new store
+    :param type_handlers: type handlers for the store
+    :param exposed_symbols: exposed symbols for the store (see `load_safe_str`)
+    :param extra_mappings: extra symbol mappings for the store (see `load_safe_str`)
+    """
     if suffix is None:
         suffix = generate_time_id()
 
     filename = f"{prefix}{store_name}{suffix}{ext}"
     ensure_dirs(filename)
-    log = open(filename, "at" if not truncate else "wt")
+    log = open(filename, "a+t" if not truncate else "wt")
 
-    store = Store(log, uri=filename, initial_data=initial_data, type_handlers=type_handlers)
+    if not truncate:
+        log.seek(0)
+        existing_code = log.read()
+    else:
+        existing_code = None
+
+    if existing_code:
+        existing_store = safe_load_str(existing_code, exposed_symbols=exposed_symbols, extra_mappings=extra_mappings)
+        append_mode = True
+    else:
+        existing_store = initial_data
+        append_mode = False
+
+    store = Store(log, uri=filename, initial_data=existing_store, type_handlers=type_handlers, append_mode=append_mode)
     return store.root
 
 

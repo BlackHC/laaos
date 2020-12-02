@@ -1,8 +1,10 @@
+import os
+
 import pytest
 import enum
 import io
-from laaos import Store, safe_load_str, compact, new_dict, new_list, new_set
-import laaos as laaos
+from laaos import Store, safe_load_str, safe_load, compact, new_dict, new_list, new_set, StrEnumHandler, \
+    WeakEnumHandler, open_file_store
 
 
 def create_memory_store(initial_data=None, type_handlers=None):
@@ -224,6 +226,53 @@ def test_compaction():
     compact("./laaos/test.py", "./laaos/test_compacted.py")
 
 
+def test_create_file_store():
+    store = open_file_store("test_create", suffix="", truncate=True)
+
+    store["list"] = [1, 2]
+    store["dict"] = dict(a=5, b=6)
+
+    store.close()
+
+    loaded_store = safe_load("./laaos/test_create.py")
+
+    assert store == loaded_store
+
+
+def test_append_file_store_edge_case():
+    open("./laaos/test_append_edge.py", "w+")
+
+    store = open_file_store("test_append_edge", suffix="")
+    store.close()
+
+    safe_load("./laaos/test_append_edge.py")
+
+
+def test_append_file_store():
+    open("./laaos/test_append.py", "w")
+    os.remove("./laaos/test_append.py")
+
+    store = open_file_store("test_append", suffix="")
+
+    store["list"] = [1, 2]
+    store["dict"] = dict(a=5, b=6)
+
+    store.close()
+
+    new_store = open_file_store("test_append", suffix="")
+
+    assert store == new_store
+
+    new_store["list"].append(3)
+    new_store["dict"]["c"] = 10
+
+    new_store.close()
+
+    final_store = safe_load("./laaos/test_append.py")
+
+    assert new_store == final_store
+
+
 def test_can_passthrough_dict():
     store, code = create_memory_store()
 
@@ -265,7 +314,7 @@ def test_enum_str_handler():
         a = 1
         b = 2
 
-    store, code = create_memory_store(type_handlers=[laaos.StrEnumHandler()])
+    store, code = create_memory_store(type_handlers=[StrEnumHandler()])
 
     store[A.a] = A.b
 
@@ -279,7 +328,7 @@ class B(enum.Enum):
 
 
 def test_enum_weak_handler():
-    store, code = create_memory_store(type_handlers=[laaos.WeakEnumHandler()])
+    store, code = create_memory_store(type_handlers=[WeakEnumHandler()])
 
     store[B.a] = B.b
 
