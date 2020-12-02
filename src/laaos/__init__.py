@@ -120,12 +120,15 @@ class Store:
         self._type_handlers: List[TypeHandler] = type_handlers
         self._log = log
         self._uri = uri
-        self._root = StoreRoot(self, self._wrap(initial_data))
+
+        wrapped_initial_data = self._wrap(initial_data)
+        self._root = StoreRoot(self, wrapped_initial_data)
         StoreAccessible.link(self._root, "store")
-        if initial_data:
+
+        if wrapped_initial_data:
             Store.write(
                 self,
-                f"store = (\n{pprint.pformat(initial_data, width=160, compact=True)}\n)",
+                f"store = (\n{pprint.pformat(wrapped_initial_data, width=160, compact=True)}\n)",
             )
         else:
             Store.write(self, "store = {}")
