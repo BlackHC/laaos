@@ -36,14 +36,16 @@ Custom wrappers can be added by registering `TypeHandler`s when creating a `Stor
 ## Example
 
 ```python
-from laaos import create_file_store, safe_load_store
-store = create_file_store('test', suffix='')
+from laaos import open_file_store, safe_load
+
+store = open_file_store("test", suffix="", truncate=True)
+print("Output file: ", store.uri)
 
 store['losses'] = []
-losses = store['losses']
+losses = store["losses"]
 
-for i in range(1, 10):
-    losses.append(1/i)
+for i in range(10):
+    losses.append(1/(i+1))
 
 store.close()
 ```
@@ -74,4 +76,30 @@ or with the more secure:
 
 ```python
 safe_load('laaos/test.py')
+```
+
+### Slightly more sensible example
+
+```python
+from laaos import open_file_store
+
+initial_data = dict(config=dict(dataset="MNIST", learning_rate=1e-4, seed=1337), losses=[])
+
+store = open_file_store("experiment_result", suffix="", initial_data=initial_data)
+
+if store["config"] != initial_data["config"]:
+    raise ValueError("Experiment mismatch!")
+
+print("Output file: ", store.uri)
+
+losses = store["losses"]
+
+for i in range(len(losses), 10):
+    print("Epoch ", i)
+    losses.append(1 / (i + 1))
+
+    if i % 3 == 0:
+        raise SystemError("Preemption!")
+
+store.close()
 ```
