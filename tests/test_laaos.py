@@ -310,6 +310,7 @@ def test_can_passthrough_set():
 
 
 def test_enum_str_handler():
+
     class A(enum.Enum):
         a = 1
         b = 2

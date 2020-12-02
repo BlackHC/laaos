@@ -117,6 +117,7 @@ class Dataclasses2DictHandler(TypeHandler):
 
 
 class Function2StrHandler(TypeHandler):
+
     def supports(self, obj):
         return isinstance(obj, typing.Callable)
 
@@ -128,6 +129,7 @@ class Function2StrHandler(TypeHandler):
 
 
 class Store:
+
     def __init__(self, log: TextIOBase, *, uri=None, initial_data=None, type_handlers=None, append_mode=False):
         """
         Create a Store.
@@ -175,9 +177,7 @@ class Store:
         elif isinstance(obj, (list, StoreList)):
             obj = StoreList(self, [self._wrap(value) for value in obj])
         elif isinstance(obj, (dict, StoreDict)):
-            obj = StoreDict(
-                self, {key: self._wrap(value) for key, value in obj.items()}
-            )
+            obj = StoreDict(self, {key: self._wrap(value) for key, value in obj.items()})
         elif isinstance(obj, (set, StoreSet)):
             obj = StoreSet(self, {self._wrap(value) for value in obj})
         elif can_iter(obj):
@@ -195,20 +195,9 @@ class Store:
         elif isinstance(obj, (list, StoreList)):
             return "[" + ", ".join(self._repr(value) for value in obj) + "]"
         elif isinstance(obj, (dict, StoreDict)):
-            return (
-                    "{"
-                    + ", ".join(
-                f"{self._repr(key)}: {self._repr(value)}"
-                for key, value in obj.items()
-            )
-                    + "}"
-            )
+            return ("{" + ", ".join(f"{self._repr(key)}: {self._repr(value)}" for key, value in obj.items()) + "}")
         elif isinstance(obj, (set, StoreSet)):
-            return (
-                "{" + ", ".join(self._repr(value) for value in obj) + "}"
-                if obj
-                else "set()"
-            )
+            return ("{" + ", ".join(self._repr(value) for value in obj) + "}" if obj else "set()")
         else:
             for type_handler in self._type_handlers:
                 if type_handler.supports(obj):
@@ -237,6 +226,7 @@ class Store:
 
 
 class StoreAccessible(object):
+
     def __init__(self, store: Store):
         self._store = store
         self._accessor = None
@@ -246,11 +236,9 @@ class StoreAccessible(object):
         return self._store
 
     def _check_accessor(self):
-        assert self._accessor is not None, (
-            "You tried to mutate a store collection after it has been unlinked!\n\n"
-            "This triggers an exception because it would be too hard to figure out how "
-            "to rewrite this into something executable."
-        )
+        assert self._accessor is not None, ("You tried to mutate a store collection after it has been unlinked!\n\n"
+                                            "This triggers an exception because it would be too hard to figure out how "
+                                            "to rewrite this into something executable.")
 
     def _wrap(self, obj):
         return Store.wrap(self._store, obj)
@@ -279,6 +267,7 @@ class StoreAccessible(object):
 
 
 class StoreDict(MutableMapping, StoreAccessible):
+
     def __init__(self, store: Store, initial_data):
         super().__init__(store)
         self._data = {}
@@ -335,6 +324,7 @@ class StoreDict(MutableMapping, StoreAccessible):
 
 
 class StoreRoot(StoreDict):
+
     def __init__(self, store: Store, initial_data):
         super().__init__(store, initial_data)
 
@@ -347,6 +337,7 @@ class StoreRoot(StoreDict):
 
 
 class StoreList(MutableSequence, StoreAccessible):
+
     def __init__(self, store, seq: list):
         super().__init__(store)
         self._seq = list(seq)
@@ -388,9 +379,7 @@ class StoreList(MutableSequence, StoreAccessible):
         return self._seq[key]
 
     def __setitem__(self, key, value) -> None:
-        assert not isinstance(
-            key, slice
-        ), "Slices are not supported for lists in the store!"
+        assert not isinstance(key, slice), "Slices are not supported for lists in the store!"
         if not 0 <= key < len(self._seq):
             # Early out with the correct exception
             self._seq[key] = value
@@ -433,6 +422,7 @@ class StoreList(MutableSequence, StoreAccessible):
 
 
 class StoreSet(MutableSet, StoreAccessible):
+
     def __init__(self, store: Store, initial_data):
         super().__init__(store)
         self._set = set(initial_data)
@@ -468,9 +458,16 @@ def ensure_dirs(filename):
     os.makedirs(abs_dir, exist_ok=True)
 
 
-def open_file_store(store_name="results", suffix=None, ext=".py", prefix="laaos/", *, truncate=False,
-                                initial_data=None, type_handlers=None,
-                                exposed_symbols=None, extra_mappings=None) -> StoreRoot:
+def open_file_store(store_name="results",
+                    suffix=None,
+                    ext=".py",
+                    prefix="laaos/",
+                    *,
+                    truncate=False,
+                    initial_data=None,
+                    type_handlers=None,
+                    exposed_symbols=None,
+                    extra_mappings=None) -> StoreRoot:
     """
     Opens a file store. Either truncates any existing store in the same file, or otherwise loads an existing store to
     append data. `initial_data` can be used for otherwise empty store.
