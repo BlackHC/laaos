@@ -1,8 +1,8 @@
 language: python
 dist: xenial
 python:
-  - 3.6
   - 3.7
+  - 3.8
 install:
   - pip install -e .[dev,test]
 script:
