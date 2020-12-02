@@ -1,6 +1,8 @@
+import dataclasses
 import os
 import enum
 import pprint
+import typing
 from collections.abc import MutableMapping, MutableSequence, MutableSet
 from datetime import datetime
 from io import TextIOBase
@@ -99,6 +101,30 @@ class ToReprHandler(TypeHandler):
 
     def repr(self, obj: enum.Enum, _repr, store):
         return repr(obj)
+
+
+class Dataclasses2DictHandler(TypeHandler):
+    """Requires custom handling on safe_load."""
+
+    def supports(self, obj):
+        return dataclasses.is_dataclass(obj)
+
+    def wrap(self, obj, wrap):
+        return obj
+
+    def repr(self, obj, repr, store):
+        return repr({key: value for key, value in dataclasses.asdict(obj).items()})
+
+
+class Function2StrHandler(TypeHandler):
+    def supports(self, obj):
+        return isinstance(obj, typing.Callable)
+
+    def wrap(self, obj, wrap):
+        return obj
+
+    def repr(self, obj, repr, store):
+        return repr(f"{obj.__module__}.{obj.__qualname__}")
 
 
 class Store:
