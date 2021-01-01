@@ -175,6 +175,52 @@ def test_nested_lists():
     store.close()
 
 
+def test_nested_list_append():
+    store, code = create_memory_store(dict(lists=[]))
+    store["lists"].append([])
+    store["lists"][0].append(1)
+
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
+
+    store.close()
+
+
+def test_nested_list_insert():
+    store, code = create_memory_store(dict(lists=[]))
+    store["lists"].insert(0, [])
+    store["lists"][0].append(1)
+    store["lists"].insert(0, [])
+    store["lists"][1].append(2)
+    store["lists"].insert(2, [])
+    store["lists"][2].append(3)
+    store["lists"].insert(2, [])
+    store["lists"][3].append(4)
+
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
+
+    store.close()
+
+
+def test_nested_list_del():
+    store, code = create_memory_store(dict(lists=[]))
+    store["lists"].extend([[], [], [], []])
+    store["lists"][0].append(1)
+    store["lists"][1].append(2)
+    store["lists"][2].append(3)
+    store["lists"][3].append(4)
+
+    del store["lists"][0]
+    store["lists"][0].append(5)
+    store["lists"][1].append(6)
+
+    assert store == safe_load_str(code.getvalue())
+    assert repr(store) == repr(safe_load_str(code.getvalue()))
+
+    store.close()
+
+
 def test_fail_on_chained_assignment():
     store, code = create_memory_store()
     a = store["list"] = []

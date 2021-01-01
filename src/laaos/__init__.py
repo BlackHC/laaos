@@ -128,7 +128,15 @@ class Function2StrHandler(TypeHandler):
 
 
 class Store:
-    def __init__(self, log: TextIOBase, *, uri=None, initial_data=None, type_handlers=None, append_mode=False):
+    def __init__(
+        self,
+        log: TextIOBase,
+        *,
+        uri=None,
+        initial_data=None,
+        type_handlers=None,
+        append_mode=False,
+    ):
         """
         Create a Store.
 
@@ -363,6 +371,9 @@ class StoreList(MutableSequence, StoreAccessible):
 
         self._write(f"{self._accessor}.insert({self._repr(index)}, {self._repr(obj)})")
 
+        for i in range(index, len(self._seq)):
+            StoreAccessible.link(self._seq[i], f"{self._accessor}[{i}]")
+
     def append(self, obj: T) -> None:
         self._check_accessor()
 
@@ -370,15 +381,19 @@ class StoreList(MutableSequence, StoreAccessible):
         self._seq.append(obj)
 
         self._write(f"{self._accessor}.append({self._repr(obj)})")
+        StoreAccessible.link(obj, f"{self._accessor}[{len(self._seq)-1}]")
 
     def __getitem__(self, key) -> T:
         return self._seq[key]
 
     def __setitem__(self, key, value) -> None:
         assert not isinstance(key, slice), "Slices are not supported for lists in the store!"
-        if not 0 <= key < len(self._seq):
+        if not -len(self._seq) <= key < len(self._seq):
             # Early out with the correct exception
             self._seq[key] = value
+
+        if key < 0:
+            key += len(self._seq)
 
         self._check_accessor()
 
@@ -395,15 +410,21 @@ class StoreList(MutableSequence, StoreAccessible):
         StoreAccessible.link(value, f"{self._accessor}[{self._repr(key)}]")
 
     def __delitem__(self, key) -> None:
-        if not 0 <= key < len(self._seq):
+        if not -len(self._seq) <= key < len(self._seq):
             # Early out with the correct exception
             del self._seq[key]
+
+        if key < 0:
+            key += len(self._seq)
 
         self._check_accessor()
 
         StoreAccessible.unlink(self._seq[key])
         del self._seq[key]
         Store.write(self._store, f"del {self._accessor}[{self._repr(key)}]")
+
+        for i in range(key, len(self._seq)):
+            StoreAccessible.link(self._seq[i], f"{self._accessor}[{i}]")
 
     def __len__(self) -> int:
         return len(self._seq)
@@ -501,13 +522,23 @@ def open_file_store(
         existing_code = None
 
     if existing_code:
-        existing_store = safe_load_str(existing_code, exposed_symbols=exposed_symbols, extra_mappings=extra_mappings)
+        existing_store = safe_load_str(
+            existing_code,
+            exposed_symbols=exposed_symbols,
+            extra_mappings=extra_mappings,
+        )
         append_mode = True
     else:
         existing_store = initial_data
         append_mode = False
 
-    store = Store(log, uri=filename, initial_data=existing_store, type_handlers=type_handlers, append_mode=append_mode)
+    store = Store(
+        log,
+        uri=filename,
+        initial_data=existing_store,
+        type_handlers=type_handlers,
+        append_mode=append_mode,
+    )
     return store.root
 
 
