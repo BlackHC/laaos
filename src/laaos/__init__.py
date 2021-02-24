@@ -113,7 +113,7 @@ class Dataclasses2DictHandler(TypeHandler):
         return obj
 
     def repr(self, obj, repr, store):
-        return repr({key: value for key, value in dataclasses.asdict(obj).items()})
+        return repr({f.name: getattr(obj, f.name) for f in dataclasses.fields(obj)})
 
 
 class Function2StrHandler(TypeHandler):
