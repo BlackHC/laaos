@@ -3,6 +3,7 @@ import torch
 
 import laaos
 
+
 class TensorHandler(laaos.TypeHandler):
     def supports(self, obj):
         return isinstance(obj, torch.Tensor)
@@ -15,4 +16,4 @@ class TensorHandler(laaos.TypeHandler):
         return repr(obj.tolist())
 
 
-
+TypeHandlers = [TensorHandler()]

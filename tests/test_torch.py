@@ -11,7 +11,7 @@ def create_memory_store(initial_data=None, type_handlers=None):
 
 
 def test_torch_tensor():
-    store, code = create_memory_store(type_handlers=[laaos.torch.TensorHandler()])
+    store, code = create_memory_store(type_handlers=laaos.torch.TypeHandlers)
     store["tensor"] = torch.as_tensor((1., 2.))
 
     assert code.getvalue() == "store = {}\nstore['tensor']=[1.0, 2.0]\n"

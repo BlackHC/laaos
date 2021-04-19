@@ -127,6 +127,14 @@ class Function2StrHandler(TypeHandler):
         return repr(f"{obj.__module__}.{obj.__qualname__}")
 
 
+DefaultTypeHandlers = [
+    Dataclasses2DictHandler(),
+    StrEnumHandler(),
+    Function2StrHandler(),
+    ToReprHandler(),
+]
+
+
 class Store:
     def __init__(
         self,
@@ -183,7 +191,9 @@ class Store:
         elif isinstance(obj, (list, StoreList)):
             obj = StoreList(self, [self._wrap(value) for value in obj])
         elif isinstance(obj, (dict, StoreDict)):
-            obj = StoreDict(self, {key: self._wrap(value) for key, value in obj.items()})
+            obj = StoreDict(
+                self, {key: self._wrap(value) for key, value in obj.items()}
+            )
         elif isinstance(obj, (set, StoreSet)):
             obj = StoreSet(self, {self._wrap(value) for value in obj})
         elif can_iter(obj):
@@ -201,9 +211,20 @@ class Store:
         elif isinstance(obj, (list, StoreList)):
             return "[" + ", ".join(self._repr(value) for value in obj) + "]"
         elif isinstance(obj, (dict, StoreDict)):
-            return "{" + ", ".join(f"{self._repr(key)}: {self._repr(value)}" for key, value in obj.items()) + "}"
+            return (
+                "{"
+                + ", ".join(
+                    f"{self._repr(key)}: {self._repr(value)}"
+                    for key, value in obj.items()
+                )
+                + "}"
+            )
         elif isinstance(obj, (set, StoreSet)):
-            return "{" + ", ".join(self._repr(value) for value in obj) + "}" if obj else "set()"
+            return (
+                "{" + ", ".join(self._repr(value) for value in obj) + "}"
+                if obj
+                else "set()"
+            )
         else:
             for type_handler in self._type_handlers:
                 if type_handler.supports(obj):
@@ -387,7 +408,9 @@ class StoreList(MutableSequence, StoreAccessible):
         return self._seq[key]
 
     def __setitem__(self, key, value) -> None:
-        assert not isinstance(key, slice), "Slices are not supported for lists in the store!"
+        assert not isinstance(
+            key, slice
+        ), "Slices are not supported for lists in the store!"
         if not -len(self._seq) <= key < len(self._seq):
             # Early out with the correct exception
             self._seq[key] = value
@@ -558,7 +581,9 @@ def safe_load_str(code: str, exposed_symbols=None, extra_mappings=None):
 
 def safe_load(path: str, exposed_symbols=None, extra_mappings=None):
     with open(path, "rt") as file:
-        return safe_load_str(file.read(), exposed_symbols=exposed_symbols, extra_mappings=extra_mappings)
+        return safe_load_str(
+            file.read(), exposed_symbols=exposed_symbols, extra_mappings=extra_mappings
+        )
 
 
 def compact(source_path: str, destination_path: str):
