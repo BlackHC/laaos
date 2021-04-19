@@ -58,6 +58,6 @@ setup(
     # dependencies). You can install these using the following syntax,
     # for example:
     # $ pip install -e .[dev,test]
-    extras_require={"dev": ["check-manifest"], "test": ["coverage", "pytest", "pytorch"]},
+    extras_require={"dev": ["check-manifest"], "test": ["coverage", "pytest", "torch"]},
     setup_requires=["pytest-runner"],
 )
