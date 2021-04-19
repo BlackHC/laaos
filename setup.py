@@ -16,7 +16,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version="2.0.4",
+    version="2.1.0",
     description='"Log as append-only source" logger',
     # Fix windows newlines.
     long_description=long_description.replace("\r\n", "\n"),
@@ -58,6 +58,6 @@ setup(
     # dependencies). You can install these using the following syntax,
     # for example:
     # $ pip install -e .[dev,test]
-    extras_require={"dev": ["check-manifest"], "test": ["coverage", "pytest"]},
+    extras_require={"dev": ["check-manifest"], "test": ["coverage", "pytest", "pytorch"]},
     setup_requires=["pytest-runner"],
 )
