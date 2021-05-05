@@ -107,7 +107,7 @@ class Dataclasses2DictHandler(TypeHandler):
     """Requires custom handling on safe_load."""
 
     def supports(self, obj):
-        return dataclasses.is_dataclass(obj)
+        return dataclasses.is_dataclass(obj) and not isinstance(obj, type)
 
     def wrap(self, obj, wrap):
         return obj
